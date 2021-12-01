@@ -1,0 +1,6 @@
+make test --dry-run --always-make --keep-going --print-directory
+make: Entering directory '/home/ferdi/UoBCOMS/ImperFunc/Imperative/coursework/sketch'
+clang -DTESTING -std=c11 -Wall -pedantic -g sketch.c test.c -I/usr/include/SDL2 -o test \
+    -fsanitize=undefined -fsanitize=address
+make: Leaving directory '/home/ferdi/UoBCOMS/ImperFunc/Imperative/coursework/sketch'
+ 

@@ -1,0 +1,10 @@
+{
+    "C_Cpp.default.configurationProvider": "ms-vscode.makefile-tools",
+    "makefile.launchConfigurations": [
+        {
+            "cwd": "/home/ferdi/UoBCOMS/ImperFunc/Imperative/coursework/sketch",
+            "binaryPath": "/home/ferdi/UoBCOMS/ImperFunc/Imperative/coursework/sketch/test",
+            "binaryArgs": []
+        }
+    ]
+}
