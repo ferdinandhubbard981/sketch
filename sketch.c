@@ -8,18 +8,27 @@
 // Allocate memory for a drawing state and initialise it
 const byte KEEPOPERAND  = (byte)63;
 state *newState() {
-  state* instance = malloc(sizeof(state*));
-  instance->x = 0;
-  instance->y = 0;
-  instance->tx = 0;
-  instance->ty = 0;
-  instance->tool = 0;
-  instance->start = 0;
-  instance->data = 0;
-  instance->end = 0;
+  state* s = malloc(sizeof(state*));
+  s->x = 0;
+  s->y = 0;
+  s->tx = 0;
+  s->ty = 0;
+  s->tool = 0;
+  s->start = 0;
+  s->data = 0;
+  s->end = 0;
   return NULL; // this is a placeholder only
 }
-
+//reset everything other than start
+void resetState(state* s) {
+  s->x = 0;
+  s->y = 0;
+  s->tx = 0;
+  s->ty = 0;
+  s->tool = 0;
+  s->data = 0;
+  s->end = 0;
+}
 // Release all memory associated with the drawing state
 void freeState(state *s) {
   free(s);
@@ -32,37 +41,86 @@ int getOpcode(byte b) {
 
 // Extract an operand (-32..31) from the rightmost 6 bits of a byte.
 int getOperand(byte b) {
-  return (int)(KEEPOPERAND & b); // this is a placeholder only
+  int output = 0;
+  if (b & (byte)pow(2, 5)) output = (b | (~KEEPOPERAND));
+  else output = b & KEEPOPERAND;
+  return output;
+}
+void draw(state* s, display* d) {
+  switch(s->tool) {
+    case NONE:
+      break;
+    case LINE:
+      line(d, s->x, s->y, s->tx, s->ty);
+      break;
+    case BLOCK:
+      block(d, s->x, s->y, s->tx - s->x, s->ty - s->y);
+      break;
+  }
+  s->x = s->tx;
+  s->y = s->ty;
 }
 
+void runTX(state* s, int operand) {
+  s->tx = operand;
+}
+
+void runTY(state* s, int operand, display* d) {
+  s->ty = operand;
+  draw(s, d);
+}
+
+void runTOOL(state* s, int operand) {
+  
+
+
+}
+
+void runDATA(state* s, int operand) {
+  
+}
 // Execute the next byte of the command sequence.
 void obey(display *d, state *s, byte op) {
-  //TO DO
+  int opcode = getOpcode(op);
+  int operand = getOperand(op);
+  switch (opcode) {
+    case DX:
+      runTX(s, operand);
+      break;
+    case DY:
+      runTY(s, operand, d);
+      break;
+    case TOOL:
+      runTOOL(s, operand);
+      break;
+    case DATA:
+      runDATA(s, operand);
+      break;
+  }
+
+
 }
 
 // Draw a frame of the sketch file. For basic and intermediate sketch files
 // this means drawing the full sketch whenever this function is called.
 // For advanced sketch files this means drawing the current frame whenever
 // this function is called.
-unsigned long long getFileLen(FILE* byteFile) {
-  unsigned long long len = 0;
 
-    byteFile = fopen(argv[1], "rb");         
-    fseek(byteFile, 0, SEEK_END);          
-    filelen = ftell(byteFile);
-}
 bool processSketch(display *d, void *data, const char pressedKey) {
-
     //TO DO: OPEN, PROCESS/DRAW A SKETCH FILE BYTE BY BYTE, THEN CLOSE IT
-    
     if (data == NULL) return (pressedKey == 27);
     state *s = (state*) data;
     char *filename = getName(d);
-    for(i = 0; i < filelen; i++) {
-       fread(buffer+i, 1, 1, fileptr); 
-}
+    FILE* byteFile = fopen(filename, "rb");
+    byte currentByte;
+    do
+    {
+      currentByte = fgetc(byteFile);
+      obey(d, s, currentByte);
+    } while (feof(byteFile));
+    
     show(d); 
-    //AND TO RESET THE DRAWING STATE APART FROM THE 'START' FIELD AFTER CLOSING THE FILE
+    resetState(s);
 
   return (pressedKey == 27);
 }

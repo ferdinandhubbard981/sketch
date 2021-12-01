@@ -306,7 +306,6 @@ static void fail(display *d, char *format) {
 
 #ifdef TESTING
 int main(int n, char *args[n]) {
-  int temp = 5;
   
   if (n == 1) { // if no arguments then run tests
     doTesting();
