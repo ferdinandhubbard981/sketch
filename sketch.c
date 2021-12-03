@@ -7,6 +7,36 @@
 
 // Allocate memory for a drawing state and initialise it
 const byte KEEPOPERAND  = (byte)63;
+const int MAXBYTE = (1 << 8) - 1;
+//debugger functions
+void printState(state* s) {
+  printf("x: %d\n", s->x);
+  printf("y: %d\n", s->y);
+  printf("tx: %d\n", s->tx);
+  printf("ty: %d\n", s->ty);
+  printf("tool: %u\n", s->tool);
+  //printf("start: %u\n", s->start);
+  printf("data: 0x%08x\n", s->data);
+  //printf("end: %d\n", s->end);
+}
+
+void printOpcode(int opcode) {
+  switch(opcode) {
+    case DX:
+      printf("opcode: DX\n");
+      break;
+    case DY:
+      printf("opcode: DY\n");
+      break;
+    case TOOL:
+      printf("opcode: TOOL\n");
+      break;
+    case DATA:
+      printf("opcode: DATA\n");
+      break;
+  }
+}
+//debugger functions END
 state *newState() {
   state* s = malloc(sizeof(state));
   s->x = 0;
@@ -29,6 +59,13 @@ void resetState(state* s) {
   s->data = 0;
   s->end = 0;
 }
+//helper functions
+unsigned int getData(state* s) {
+  int output = s->data;
+  s->data = 0;
+  return output;
+}
+
 // Release all memory associated with the drawing state
 void freeState(state *s) {
   free(s);
@@ -42,8 +79,8 @@ int getOpcode(byte b) {
 // Extract an operand (-32..31) from the rightmost 6 bits of a byte.
 int getOperand(byte b) {
   int output = 0;
-  if (b & (byte)pow(2, 5)) output = (b | (~KEEPOPERAND));
-  else output = b & KEEPOPERAND;
+  if (b & (byte)pow(2, 5)) output = (b | (~KEEPOPERAND)); //set leading bits to 1 if input is two's complement negative 
+  else output = b & KEEPOPERAND; //if two's complement is positive then set leading bits to 0
   return output;
 }
 void draw(state* s, display* d) {
@@ -59,38 +96,62 @@ void draw(state* s, display* d) {
   }
   s->x = s->tx;
   s->y = s->ty;
-}
+  }
 
 void runDX(state* s, int operand) {
   s->tx += operand;
 }
 
-void runDY(state* s, int operand, display* d) {
+void runDY(display* d, state* s, int operand) {
   s->ty += operand;
   draw(s, d);
 }
 
-void runTOOL(state* s, int operand) {
-  s->tool = operand;
+void changeTOOL(display* d, state* s, int operand) {
+  switch(operand) {
+    case COLOUR:
+    {
+      colour(d, (int)getData(s));
+      break;
+    }
+    case TARGETX:
+      s->tx = getData(s);
+      break;
 
+    case TARGETY:
+      s->ty = getData(s);
+      break;
+
+    default:
+      s->tool = operand;
+      break;
+  }
 }
 
 void runDATA(state* s, int operand) {
-  
+  byte input = (byte) operand;
+  if (operand < 0) {
+    input = ~input + 1; //convert negative two's complement int to positive two's complement int 
+    input = ((~input) & KEEPOPERAND) + 1; //convert positive two's complement int to negative two's complement 6 bit number by setting the 2 leading bits to 0
+  }
+  //if positive then no change needs to be made
+  s->data = (s->data << 6) | input;
 }
 // Execute the next byte of the command sequence.
 void obey(display *d, state *s, byte op) {
   int opcode = getOpcode(op);
   int operand = getOperand(op);
+  //printOpcode(opcode);
+  //printf("operand: %d\n", operand);
   switch (opcode) {
     case DX:
       runDX(s, operand);
       break;
     case DY:
-      runDY(s, operand, d);
+      runDY(d, s, operand);
       break;
     case TOOL:
-      runTOOL(s, operand);
+      changeTOOL(d, s, operand);
       break;
     case DATA:
       runDATA(s, operand);
@@ -112,12 +173,14 @@ bool processSketch(display *d, void *data, const char pressedKey) {
     char *filename = getName(d);
     FILE* byteFile = fopen(filename, "rb");
     byte currentByte = fgetc(byteFile);
-    
+    //int i = 0;
     while (!feof(byteFile)) {
+      //for(int i = 0; i < 100; i++) printf("\n");
+      //printf("i: %d\n", i++);
       obey(d, s, currentByte);
+      //printState(s);
       currentByte = fgetc(byteFile);
     }
-    
     show(d); 
     resetState(s);
 
