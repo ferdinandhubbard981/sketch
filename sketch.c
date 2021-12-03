@@ -8,16 +8,16 @@
 // Allocate memory for a drawing state and initialise it
 const byte KEEPOPERAND  = (byte)63;
 state *newState() {
-  state* s = malloc(sizeof(state*));
+  state* s = malloc(sizeof(state));
   s->x = 0;
   s->y = 0;
   s->tx = 0;
   s->ty = 0;
-  s->tool = 0;
+  s->tool = LINE;
   s->start = 0;
   s->data = 0;
   s->end = 0;
-  return NULL; // this is a placeholder only
+  return s;
 }
 //reset everything other than start
 void resetState(state* s) {
@@ -25,7 +25,7 @@ void resetState(state* s) {
   s->y = 0;
   s->tx = 0;
   s->ty = 0;
-  s->tool = 0;
+  s->tool = LINE;
   s->data = 0;
   s->end = 0;
 }
@@ -61,18 +61,17 @@ void draw(state* s, display* d) {
   s->y = s->ty;
 }
 
-void runTX(state* s, int operand) {
-  s->tx = operand;
+void runDX(state* s, int operand) {
+  s->tx += operand;
 }
 
-void runTY(state* s, int operand, display* d) {
-  s->ty = operand;
+void runDY(state* s, int operand, display* d) {
+  s->ty += operand;
   draw(s, d);
 }
 
 void runTOOL(state* s, int operand) {
-  
-
+  s->tool = operand;
 
 }
 
@@ -85,10 +84,10 @@ void obey(display *d, state *s, byte op) {
   int operand = getOperand(op);
   switch (opcode) {
     case DX:
-      runTX(s, operand);
+      runDX(s, operand);
       break;
     case DY:
-      runTY(s, operand, d);
+      runDY(s, operand, d);
       break;
     case TOOL:
       runTOOL(s, operand);
@@ -112,12 +111,12 @@ bool processSketch(display *d, void *data, const char pressedKey) {
     state *s = (state*) data;
     char *filename = getName(d);
     FILE* byteFile = fopen(filename, "rb");
-    byte currentByte;
-    do
-    {
-      currentByte = fgetc(byteFile);
+    byte currentByte = fgetc(byteFile);
+    
+    while (!feof(byteFile)) {
       obey(d, s, currentByte);
-    } while (feof(byteFile));
+      currentByte = fgetc(byteFile);
+    }
     
     show(d); 
     resetState(s);
