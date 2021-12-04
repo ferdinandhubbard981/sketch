@@ -107,6 +107,7 @@ void runDY(display* d, state* s, int operand) {
   draw(s, d);
 }
 
+
 void changeTOOL(display* d, state* s, int operand) {
   switch(operand) {
     case COLOUR:
@@ -120,6 +121,18 @@ void changeTOOL(display* d, state* s, int operand) {
 
     case TARGETY:
       s->ty = getData(s);
+      break;
+
+    case SHOW:
+      show(d);
+      break;
+    
+    case PAUSE:
+      pause(d, getData(s));
+      break;
+
+    case NEXTFRAME:
+      s->end = true;
       break;
 
     default:
@@ -173,15 +186,19 @@ bool processSketch(display *d, void *data, const char pressedKey) {
     char *filename = getName(d);
     FILE* byteFile = fopen(filename, "rb");
     byte currentByte = fgetc(byteFile);
-    //int i = 0;
-    while (!feof(byteFile)) {
-      //for(int i = 0; i < 100; i++) printf("\n");
-      //printf("i: %d\n", i++);
-      obey(d, s, currentByte);
-      //printState(s);
+    int index = 0;
+    while (!feof(byteFile) && !s->end) {
+      if (index >= s->start) {
+        obey(d, s, currentByte);
+      }
+      if (s->end) {
+        s->start = index+1;
+      }
       currentByte = fgetc(byteFile);
+      index++;
     }
-    show(d); 
+    show(d);
+    if (!s->end) s->start = 0; 
     resetState(s);
 
   return (pressedKey == 27);
